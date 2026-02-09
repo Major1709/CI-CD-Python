@@ -2,17 +2,19 @@ name: CD
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 permissions:
   contents: read
   packages: write
 
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    outputs:
-      image: ${{ steps.meta.outputs.tags }}
     steps:
       - uses: actions/checkout@v4
 
@@ -43,7 +45,8 @@ jobs:
             set -e
             IMAGE="ghcr.io/${{ github.repository_owner }}/my-cicd-python:latest"
 
-            docker login ghcr.io -u "${{ github.actor }}" -p "${{ secrets.GITHUB_TOKEN }}" || true
+            echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" | \
+              docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
             docker pull "$IMAGE"
             docker stop myapp || true
