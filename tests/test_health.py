@@ -11,4 +11,4 @@ def test_health():
 def test_home():
     r = client.get("/home")
     assert r.status_code == 200
-    assert r.json() == {"message": "Welcome to the home kevi!"}
+    assert r.json() == {"message": "Welcome to the home kevin!"}
