@@ -8,4 +8,4 @@ def health():
 
 @app.get("/home")
 def home():
-    return {"message": "Welcome to the home kevi!"}
+    return {"message": "Welcome to the home kevin!"}
