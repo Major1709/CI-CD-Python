@@ -1,0 +1,54 @@
+name: CD
+
+on:
+  push:
+    branches: [ "master" ]
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: "major1709"
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push
+        run: |
+          IMAGE="ghcr.io/major1709/ci-cd-python:latest"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH (pull & restart)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            IMAGE="ghcr.io/major1709/ci-cd-python:latest"
+
+            echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" | \
+              docker login ghcr.io -u "major1709" --password-stdin
+
+            docker pull "$IMAGE"
+            docker stop myapp || true
+            docker rm myapp || true
+            docker run -d --name myapp -p 8000:8000 "$IMAGE"
